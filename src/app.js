@@ -1,3 +1,4 @@
+//2nd approach of segregated codes
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants";
 
@@ -19,3 +20,37 @@ const app = express();
     throw err;
   }
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//1st approach is using iffes("Immediately Invoked Function Expression")
+/*
+import mongoose from "mongoose";
+import { DB_NAME } from "./constants";
+
+(async () => {
+  try {
+    await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`);
+  } catch (error) {
+    console.log("ERROR: ", error);
+    throw err;
+  }
+})();
+*/
