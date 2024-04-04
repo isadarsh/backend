@@ -8,6 +8,7 @@ const asyncHandler = (requestHandler) => {
 };
 
 export { asyncHandler };
+    
 /*
 //1st of doing using higher order functions
 const asyncHandler= (fn)=> async (req, res, next)=>{
