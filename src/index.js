@@ -5,13 +5,12 @@ import app from "./app.js";
 dotenv.config({
   path: "./env",
 });
-
 //calling the function and since async hence will return promise
 connectDB()
   .then(() => {
     // checking errors from the app side (run time env)
     app.on("error", (error) => {
-      console.log("error:", error);
+      console.log("error is:", error);
       throw error;
     });
     //starting the server on some port
