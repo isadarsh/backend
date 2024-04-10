@@ -57,7 +57,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 //giving custom password check methods
-userSchema.methods.isPasswordCorrectAdarsh = async function (password) {
+userSchema.methods.isPasswordCorrectXYZ = async function (password) {
   return await bcrypt.compare(password, this.password)
 }
 

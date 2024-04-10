@@ -6,7 +6,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 const router = Router();
 
 router.route("/register").post(
-    //inject first the middleware of multer to handle files
+    //inject first the middleware of multer to Handle files
     upload.fields([
         {
             name: "avatar",
