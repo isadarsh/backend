@@ -1,6 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 const registerUser = asyncHandler(async (req, res, next) => {
     /*return res.status(200).json({
@@ -41,6 +43,35 @@ const registerUser = asyncHandler(async (req, res, next) => {
         throw new ApiError(400, "avatar is required")
     }
 
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+    if (!avatar) {
+        throw new ApiError(400, "Avatar not uploaded failure")
+    }
+
+    const user= await User.create({
+        fullName, 
+        avatar: avatar.url,
+        coverImage: coverImage?.url || "",
+        email,
+        userName: userName.toLowerCase(),
+        password
+    })
+    //is succesfully inserted? also removing paswd,ref_token
+    const createdUser = await User.findById(user._id).select(
+        "-password -refreshToken"
+    )
+
+    if (!createdUser) {
+        throw new ApiError(500, "Server side failure while registering")
+    }
+
+    return res.status(201).json(
+        new ApiResponse(200, createdUser, "User is registered Succesfully")
+    )
+
+    
 
 });
 
