@@ -30,21 +30,21 @@ const registerUser = asyncHandler(async (req, res, next) => {
     //inject multer middleware in route just before {registerUser} to handle Files
 
     // check user exists?
-    const userExists = User.findOne({ email, userName })
+    const userExists = await User.findOne({ email, userName })
     if (userExists) {
         throw new ApiError(409, "username/ email already exists")
     }
 
     //check images in request.files (multer adds this feild in req)
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;  //giving double check is given or not
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "avatar is required")
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath); //if file not there return "", nice feature of cloudinary
 
     if (!avatar) {
         throw new ApiError(400, "Avatar not uploaded failure")
@@ -58,7 +58,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
         userName: userName.toLowerCase(),
         password
     })
-    //is succesfully inserted? also removing paswd,ref_token
+    //is succesfully inserted? also removing paswd,ref_token, also takes time "await"
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )

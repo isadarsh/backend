@@ -5,7 +5,7 @@ import app from "./app.js";
 dotenv.config({
   path: "./env",
 });
-//calling the function and since async hence will return promise
+//calling the function and since async therefore will return promise
 connectDB()
   .then(() => {
     // checking errors from the app side (run time env)
