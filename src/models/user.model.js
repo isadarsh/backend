@@ -57,7 +57,8 @@ userSchema.pre("save", async function (next) {
   next();
 });
 //giving custom password check methods
-userSchema.methods.isPasswordCorrectXYZ = async function (password) {
+//arrow function do not know context hence, proper fun def
+userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password)
 }
 

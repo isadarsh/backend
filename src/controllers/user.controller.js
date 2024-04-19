@@ -4,6 +4,24 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshToken = async (userId)=>{
+    try {
+        const user = await User.findById(userId);
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+        
+
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false })
+        
+        return {accessToken, refreshToken}
+
+        
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong")
+    }
+}
+
 const registerUser = asyncHandler(async (req, res, next) => {
     /*return res.status(200).json({
         message: "this is the point",
@@ -74,5 +92,61 @@ const registerUser = asyncHandler(async (req, res, next) => {
     
 
 });
+
+const loginUser = asyncHandler(async (req, res, next) => {
+    /*Login Logic
+    get req.body data
+    verify email
+    find the user
+    check the password 
+    generate access, refresh tokens
+    send them as cookies
+    */
+    
+    const { userName, email, password } = req.body();
+
+    if (!userName || !email) {
+        throw new ApiError(400, "userName/email is required")
+    }
+
+    const user= await User.findOne({
+        //using mongoDB operator to check either
+        $or: [{userName}, {email}]
+    })
+
+    if (!user) {
+        throw new ApiError(400, "user does not exist")
+    }
+
+    const validUser = user.isPasswordCorrect(password);
+
+    if (!validUser) {
+        throw new ApiError(401, "wrong credentials")
+    }
+
+    const { refreshToken, accessToken } = generateAccessAndRefreshToken(user._id);
+
+    //optional new user object
+    // const loggedInUser= User.findById(user._id).select("-password -refreshToken")
+
+    const option = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, option)
+        .coookie("refreshToken", refreshToken, option)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    user: accessToken, refreshToken //, loggedInUser
+                },
+                "user logged In succesfully"
+            )
+        )
+
+})
 
 export {registerUser}
