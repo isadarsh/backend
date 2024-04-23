@@ -94,10 +94,11 @@ const loginUser = asyncHandler(async (req, res, next) => {
     generate access, refresh tokens
     send them as cookies
     */
+// see form-data and x-www-urlencoded issues here
+  const { userName, email, password } = req.body;
+  // console.log(req.body);
 
-  const { userName, email, password } = req.body();
-
-  if (!userName || !email) {
+  if (!(userName || email)) {
     throw new ApiError(400, "userName/email is required");
   }
 
@@ -110,13 +111,15 @@ const loginUser = asyncHandler(async (req, res, next) => {
     throw new ApiError(400, "user does not exist");
   }
 
-  const validUser = user.isPasswordCorrect(password);
+  const validPassword = user.isPasswordCorrect(password);
 
-  if (!validUser) {
+  if (!validPassword) {
     throw new ApiError(401, "wrong credentials");
   }
-
-  const { refreshToken, accessToken } = generateAccessAndRefreshToken(user._id);
+// await was imp here
+  const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
 
   //optional new user object
   // const loggedInUser= User.findById(user._id).select("-password -refreshToken")
@@ -124,17 +127,19 @@ const loginUser = asyncHandler(async (req, res, next) => {
   const option = {
     httpOnly: true,
     secure: true,
+    sameSite: "none",
   };
 
   return res
     .status(200)
     .cookie("accessToken", accessToken, option)
-    .coookie("refreshToken", refreshToken, option)
+    .cookie("refreshToken", refreshToken, option)
     .json(
       new ApiResponse(
         200,
         {
-          user: accessToken, refreshToken, //,loggedInUser
+          user: accessToken,
+          refreshToken, //,loggedInUser
         },
         "User logged In succesfully"
       )
@@ -142,7 +147,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
 });
 
 const logoutUser = asyncHandler(async (req, res, next) => {
-    /*logout LOGIC
+  /*logout LOGIC
     1.manage cookie
     2.reset cookies
         but we need user credentials for that!
@@ -150,8 +155,28 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     use req.user to do findByIdAndUpdate(id, operation, new:true)
     return res.clearcookies
     */
-    
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: {
+        refreshToken: 1, // this removes the field from document
+      },
+    },
+    {
+      new: true,
+    }
+  );
 
-})
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged Out"));
+});
 
 export { registerUser, loginUser, logoutUser };
