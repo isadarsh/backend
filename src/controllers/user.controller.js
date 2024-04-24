@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -95,7 +95,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
     generate access, refresh tokens
     send them as cookies
     */
-// see form-data and x-www-urlencoded issues here
+  // see form-data and x-www-urlencoded issues here
   const { userName, email, password } = req.body;
   // console.log(req.body);
 
@@ -117,7 +117,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
   if (!validPassword) {
     throw new ApiError(401, "wrong credentials");
   }
-// await was imp here
+  // await was imp here
   const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
     user._id
   );
@@ -180,7 +180,7 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
-const refreshAccessToken = asyncHandler(async (req, res, next)=> {
+const refreshAccessToken = asyncHandler(async (req, res, next) => {
   /*process
   if the access token is expired
   hit an endpoint with user
@@ -188,51 +188,87 @@ const refreshAccessToken = asyncHandler(async (req, res, next)=> {
   validate it with the db stored token
   generate new access and refresh token
   */
+
+  const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken;
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized request");
+  }
   try {
-    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken;
-    if (!incomingRefreshToken) {
-      throw new ApiError(401, "Unauthorized request")
-    }
-    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
 
     const user = await User.findById(decodedToken?._id);
 
     if (!user) {
-        throw new ApiError(401, "Invalid refresh token")
-    }
-    
-    if (incomingRefreshToken !== user?.refreshToken) {
-      throw new ApiError(401, "Refresh token is expired/ used")
+      throw new ApiError(401, "Invalid refresh token");
     }
 
-    const {accessToken, newRefreshToken}= generateAccessAndRefreshToken(user._id)
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh token is expired/ used");
+    }
+
+    const { accessToken, newRefreshToken } = generateAccessAndRefreshToken(
+      user._id
+    );
 
     const option = {
       httpOnly: true,
-      secure: true
-    }
+      secure: true,
+    };
 
     return res
       .status(200)
-    .cookie("accessToken", accessToken, option)
+      .cookie("accessToken", accessToken, option)
       .cookie("refreshToken", newRefreshToken, option)
-      .json(  
+      .json(
         new ApiResponse(
-          200, 
+          200,
           {
-            accessToken, refreshToken: newRefreshToken
+            accessToken,
+            refreshToken: newRefreshToken,
           },
           "Access token refreshed"
-      )
-    )
-    
+        )
+      );
   } catch (error) {
-    throw new ApiError(401, error?.message || "Invalid refresh token")
-    
+    throw new ApiError(401, error?.message || "Invalid refresh token");
+  }
+});
+
+const changePassword = asyncHandler(async (req, res, next) => {
+  /* check is user logged in?
+  take old password, new password
+  find and update by id
+   */
+
+  const { oldpassword, newpassword } = req.body;
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "user not found")
   }
 
+  const isValid = user.isPasswordCorrect(oldpassword);
+  if (!isValid) {
+    throw new ApiError(401, "Ivalid old password")
+  }
 
+  await user.findByIdAndUpdate(req.user._id, { password: newpassword });
+  user.save()
+
+  return res.status(200).json({message: "password changed successfully"})
 
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changePassword,
+};
