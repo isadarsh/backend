@@ -237,9 +237,9 @@ const refreshAccessToken = asyncHandler(async (req, res, next) => {
   }
 });
 
-const changePassword = asyncHandler(async (req, res, next) => {
-  /* check is user logged in?
-  take old password, new password
+const changePassword = asyncHandler(async (req, res) => {
+  /* check is user logged in? using auth middleware
+  take old password, new password (can also use confirm new password)
   find and update by id
    */
 
@@ -248,19 +248,113 @@ const changePassword = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user._id);
 
   if (!user) {
-    throw new ApiError(404, "user not found")
+    throw new ApiError(404, "user not found");
   }
 
-  const isValid = user.isPasswordCorrect(oldpassword);
+  const isValid = await user.isPasswordCorrect(oldpassword);
   if (!isValid) {
-    throw new ApiError(401, "Ivalid old password")
+    throw new ApiError(400, "Invalid old password");
   }
 
+  user.password = newpassword;
+  await user.save({ validateBeforeSave: false });
+  /*
+  //it bypasses Mongoose middleware, including pre and post hooks, which can 
+  include important validations and logic (like bcrypt pswd if modified)
   await user.findByIdAndUpdate(req.user._id, { password: newpassword });
   user.save()
+  */
 
-  return res.status(200).json({message: "password changed successfully"})
+  return res.status(200).json(new ApiResponse(200, {}, "Password changed succesfully"));
+})
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res.status(200).json(new ApiResponse(200, req.user, "Current user fetched successfully"))
+})
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!fullName || !email) {
+    throw new ApiError(400, "All feilds are required")
+  }
+
+  const user = User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email
+      }
+    },
+    {new: true}
+  ).select("-password")
+
+
+  return res.status(200).json(new ApiResponse(200, req.user, "Account details updated succesfully"))
+
+
+})
+
+const updateAvatar = asyncHandler(async (req, res) => {
+  /*
+  make sure authorized request (auth middleware)
+
+   */
+
+  const avatarLocalPath = req.file.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing")
+  }
+  //whole avatar object is here
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar.url) {
+    throw new ApiError(500, "Error while uploading avatar")
+  }
+
+  const user= await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url
+      }
+    },
+    {new: true}
+  ).select("-password")
+
+  return res.status(200).json(new ApiResponse(200, user, "Avatar updated succesfully"))
+})
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+  /*
+  make sure authorized request (auth middleware)
+
+   */
+  //check file and files and doc
+  const coverImageLocalPath = req.file.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover Image file is missing");
+  }
+  //whole avatar object is here
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new ApiError(500, "Error while uploading Cover Image")
+  }
+
+  const user= await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url
+      }
+    },
+    {new: true}
+  ).select("-password")
+
+  return res.status(200).json(new ApiResponse(200, user, "Cover Image updated succesfully"))
 })
 
 
@@ -271,4 +365,8 @@ export {
   logoutUser,
   refreshAccessToken,
   changePassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateAvatar,
+  updateCoverImage,
 };
