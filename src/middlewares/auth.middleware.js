@@ -4,16 +4,18 @@ import jwt from "jsonwebtoken"
 import { User } from "../models/user.model.js";
 
 export const verifyJWT = asyncHandler(async (req, res, next) => {
-    /*logic of middleware
-    "wrap around try catch"
-    why not send user, by adding req.user
-    store token from req.cookie
-    verify using jwt if it is same as AccesstokenSecret
-    load user using the "_id" of jwt response (which you defined in schema>jwt)
-    add req.user= user
-    continue using next()
-    */
-    //for case req is from mobile as "Authorization": "Bearer oia*93*uiahiu"
+    
+/*logic of middleware
+"wrap around try catch"
+why not send user, by adding req.user
+store token from req.cookie
+verify using jwt if it is same as AccesstokenSecret
+load user using the "_id" of jwt response (which you defined in schema>jwt)
+add req.user= user
+continue using next()
+//for case req is from mobile as "Authorization": "Bearer oia*93*uiahiu"
+*/
+    
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
         
