@@ -452,6 +452,55 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       );
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => {
+   // req.user._id gives string, which when passed in db-calls is converted to mongoose object id internally
+   // however if your wish to pass string as argument -> _id: new mongoose.Types.ObjectId( req.user._id ) 
+   const { userId } = req.user._id;
+   
+   const user = await User.aggregate([
+      {
+         $match: {
+            _id: userId
+            // _id: new mongoose.Types.ObjectId( req.use._id )
+         }
+      },
+      {
+         $lookup: {
+            from: "videos",
+            localField: "watchHistory",
+            foreignField: "_id",
+            as: "watchHistory",
+            pipeline: [
+               {
+                  $lookup: {
+                     from: "users",
+                     localField: "owner",
+                     foreignField: "_id",
+                     as: "owner",
+                     pipeline: {
+                        $project: {
+                           fullName: 1,
+                           userName: 1,
+                           avatar: 1,
+                        }
+                     }
+                  }
+               },
+               {
+                  $addFields: {
+                     owner: {
+                        $first: "$owner"
+                     }
+                  }
+               }
+            ]
+         }
+      }
+   ])
+
+   return res.status(200).json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"))
+})
+
 export {
    registerUser,
    loginUser,
@@ -463,4 +512,5 @@ export {
    updateAvatar,
    updateCoverImage,
    getUserChannelProfile,
+   getWatchHistory,
 };
